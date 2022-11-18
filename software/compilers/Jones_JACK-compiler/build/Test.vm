@@ -1,0 +1,3 @@
+push local 2
+pop argument 10
+add

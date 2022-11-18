@@ -1,0 +1,15 @@
+; Push LCL 2
+@2
+D=A
+@LCL
+A=M
+A=A+D
+A=M
+D=A
+@SP
+A=M
+M=D
+@SP
+M=M+1
+POP ARG 10
+ADD
