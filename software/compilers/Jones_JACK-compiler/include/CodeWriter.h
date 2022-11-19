@@ -83,7 +83,8 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op);
 * 									1: thisCodeWriter == NULL
 * 									2: memory == NULL
 * 									3: Unrecognized memory segment
-* 									4: Command did not match either C_PUSH or C_POP
+* 									4: Invalid "pop"; cannot pop into constant memory segment
+* 									5: Command did not match either C_PUSH or C_POP
 **/
 int codeWriter_writePushPop(CodeWriter thisCodeWriter, commandType command, char * memory, int offset);
 

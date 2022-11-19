@@ -77,8 +77,8 @@ int main( int argc, char ** argv )
 		while( true )
 		{
 			char buffer[MAX_STRING_LENGTH];
-	        fgets(buffer, MAX_STRING_LENGTH, vm_file);
-	        if( !feof(vm_file) )
+	        char * done = fgets(buffer, MAX_STRING_LENGTH, vm_file);
+	        if( done != NULL )
         	{
         		DEBUG_PRINTF("vm file has more lines\n");
         		Parser_t parser_data = {0};

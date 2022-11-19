@@ -86,7 +86,7 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op)
 			"D=M\n"
 			"A=A-1\t\t// Point A at TOS - 2\n"
 			"D=D-M\n"
-			"@EQUAL"
+			"@EQUAL\n"
 			"D;JEQ\n"
 			"(NOT_EQUAL)\n"
 			"D=0\n"
@@ -109,7 +109,7 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op)
 			"D=-M\n"
 			"A=A-1\t\t// Point A at TOS - 2\n"
 			"D=D+M\n"
-			"@GREATER_THAN"
+			"@GREATER_THAN\n"
 			"D;JGT\n"
 			"(NOT_GREATER_THAN)\n"
 			"D=0\n"
@@ -132,7 +132,7 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op)
 			"D=-M\n"
 			"A=A-1\t\t// Point A at TOS - 2\n"
 			"D=D+M\n"
-			"@LESS_THAN"
+			"@LESS_THAN\n"
 			"D;JLT\n"
 			"(NOT_LESS_THAN)\n"
 			"D=0\n"
@@ -175,56 +175,152 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op)
 	return err;
 }
 
-int codeWriter_writePushPop(CodeWriter thisCodeWriter, commandType command, char * memory, int offset)
+int codeWriter_writePushPop(CodeWriter thisCodeWriter, commandType command, char * segment, int value)
 {
 	int err = 0;
-
+	enum { LCL_ARG_THS_THT, TEMP, PTR, CONSTANT } segment_type_t;
+	
 	if( thisCodeWriter == NULL ) err = 1;
 
 	if( err == 0 )
 	{
-		if( memory == NULL ) err == 2;
+		if( segment == NULL ) err == 2;
 	}
 
 	if( err == 0 )
 	{
-		if( strcmp(memory, "local") == 0 ) strcpy(memory, "LCL\0");
-		else if( strcmp(memory, "argument") == 0 ) strcpy(memory, "ARG\0");
-		else if( strcmp(memory, "this") == 0 ) strcpy(memory, "THIS\0");
-		else if( strcmp(memory, "that") == 0 ) strcpy(memory, "THAT\0");
-		else err = 3;
+		if(	( strcmp(segment, "local") == 0 ) ||
+			( strcmp(segment, "argument") == 0 ) ||
+			( strcmp(segment, "this") == 0 ) ||
+			( strcmp(segment, "that") == 0 ) )
+		{
+			segment_type_t = LCL_ARG_THS_THT;
+			if( strcmp(segment, "local") == 0 )
+			{
+				strcpy(segment, "LCL\0");
+			}
+			else if( strcmp(segment, "argument") == 0 )
+			{
+				strcpy(segment, "ARG\0");
+			}
+			else if( strcmp(segment, "this") == 0 )
+			{
+				strcpy(segment, "THIS\0");
+			}
+			else if( strcmp(segment, "that") == 0 )
+			{
+				strcpy(segment, "THAT\0");
+			}
+		}
+		else if( strcmp(segment, "temp") == 0 )
+		{
+			segment_type_t = TEMP;
+		}
+		else if( strcmp(segment, "pointer") == 0 )
+		{
+			segment_type_t = PTR;
+		}
+		else if( strcmp(segment, "constant") == 0 )
+		{
+			segment_type_t = CONSTANT;
+		}
+		else
+		{
+			err = 3;
+		}
+	}
 
-		if( command == C_PUSH ) fprintf(thisCodeWriter->asm_file,
-			"// push %s %d\n"
-			"@%d\t\t// Load D with value to push\n"
-			"D=A\n"
-			"@%s\n"
-			"A=M\n"
-			"A=D+A\n"
-			"D=M\n"
-			"@SP\t\t// A = 0 / M = SP\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"M=D\t\t// TOS <-- D\n"
-			"@SP\n"
-			"M=M+1\t\t// SP++\n", memory, offset, offset, memory);
-		else if( command == C_POP ) fprintf(thisCodeWriter->asm_file,
-			"// pop %s %d\n"
-			"@%d\t\t// Compute dest. memory address\n"
-			"D=A\n"
-			"@%s\n"
-			"A=M\n"
-			"D=D+A\n"
-			"@SP\t\t// Store temporarily at TOS\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"M=D\n"
-			"A=A-1\t\t// A = SP - 1 / M = *(TOS - 1)\n"
-			"D=M\t\t// Load D with TOS - 1\n"
-			"A=A+1\t\t// A = SP / M = TOS\n"
-			"A=M\t\t// Load A with memory + offset\n"
-			"M=D\n"
-			"@SP\n"
-			"M=M-1\t\t// SP--\n", memory, offset, offset, memory);
-		else err == 4;
+	if( err == 0 )
+	{
+		if( command == C_PUSH )
+		{
+			fprintf(thisCodeWriter->asm_file, "// push %s %d\n", segment, value);
+			
+			switch( segment_type_t )
+			{
+				case LCL_ARG_THS_THT:
+					fprintf(thisCodeWriter->asm_file,
+						"@%s\t\t// Load D with value to push\n"
+						"D=M\n"
+						"@%d\n"
+						"A=D+A\n"
+						"D=M\n", segment, value);
+					break;
+				case TEMP:
+					fprintf(thisCodeWriter->asm_file,
+						"@5\t\t// Load D with value to push\n"
+						"D=A\n"
+						"@%d\n"
+						"A=D+A\n"
+						"D=M\n", value);
+					break;
+				case PTR:
+					fprintf(thisCodeWriter->asm_file,
+						"@3\t\t// Load D with value to push\n"
+						"D=A\n"
+						"@%d\n"
+						"A=D+A\n"
+						"D=M\n", value);
+					break;
+				case CONSTANT:
+					fprintf(thisCodeWriter->asm_file,
+						"@%d\t\t// Load D with value to push\n"
+						"D=A\n", value);
+					break;
+			}
+
+			fprintf(thisCodeWriter->asm_file,
+				"@SP\t\t// A = 0 / M = SP\n"
+				"M=M+1\t\t// SP++\n"
+				"A=M-1\t\t// A = old SP / M = TOS - 1\n"
+				"M=D\t\t// (TOS - 1) <-- D\n");
+		}
+
+		else if( command == C_POP )
+		{
+			if( segment_type_t == CONSTANT ) err = 4;
+			else
+			{
+				fprintf(thisCodeWriter->asm_file, "// pop %s %d\n", segment, value);
+
+				switch( segment_type_t )
+				{
+					case LCL_ARG_THS_THT:
+						fprintf(thisCodeWriter->asm_file,
+							"@%s\t\t// Compute dest. memory address\n"
+							"D=M\n"
+							"@%d\n"
+							"D=D+A\n", segment, value);
+						break;
+					case TEMP:
+						fprintf(thisCodeWriter->asm_file,
+							"@5\t\t// Compute dest. memory address\n"
+							"D=A\n"
+							"@%d\n"
+							"D=D+A\n", value);
+						break;
+					case PTR:
+						fprintf(thisCodeWriter->asm_file,
+							"@3\t\t// Compute dest. memory address\n"
+							"D=A\n"
+							"@%d\n"
+							"D=D+A\n", value);
+						break;
+				}
+
+				fprintf(thisCodeWriter->asm_file,
+					"@13\n"
+					"M=D\t\t// Store dest. addr. in RAM[13] (temp reg)\n"
+					"@SP\t\t// Load D with value at TOS\n"
+					"M=M-1\t\t// SP--\n"
+					"A=M\t\t// A = SP - 1 / M = *(TOS - 1)\n"
+					"D=M\t\t// Load D with TOS - 1\n"
+					"@13\n"
+					"A=M\t\t// Load A with memory + offset\n"
+					"M=D\n");
+			}
+		}
+		else err == 5;
 	}
 
 	return err;
