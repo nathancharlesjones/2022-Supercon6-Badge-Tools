@@ -41,15 +41,17 @@ int main( int argc, char ** argv )
 
 	if( err == 0 )
 	{
-		char * asm_filename = calloc(1, strlen(argv[1])+1);
+		DEBUG_PRINTF("strlen .vm filename: %ld\n", strlen(argv[1]));
+		// Add 2; one for nul (not included in strlen) and one to go from ".vm" to ".asm"
+		char * asm_filename = calloc(1, strlen(argv[1])+2);
 		if( asm_filename == NULL ) err = -1;
 		else
 		{
 			char * dot = rindex(argv[1], '.');
 			strncpy(asm_filename, argv[1], dot - argv[1]);
-			DEBUG_PRINTF("ASM filename: %s\n", asm_filename);
+			DEBUG_PRINTF("ASM filename: %s\tstrlen: %ld\n", asm_filename, strlen(asm_filename));
 			strcat(asm_filename, ".asm");
-			DEBUG_PRINTF("ASM filename: %s\n", asm_filename);
+			DEBUG_PRINTF("ASM filename: %s\tstrlen: %ld\n", asm_filename, strlen(asm_filename));
 			asm_file = fopen(asm_filename, "w");
 			if( asm_file == NULL )
 			{

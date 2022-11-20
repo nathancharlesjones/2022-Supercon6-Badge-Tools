@@ -71,14 +71,18 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op)
 			"A=M\t\t// A = SP / M = TOS\n"
 			"D=M\n"
 			"A=A-1\t\t// Point A at TOS - 2\n"
-			"M=D-M\n");
+			"M=M-D\n");
 		else if( strcmp(op, "neg") == 0 ) fprintf(thisCodeWriter->asm_file,
 			"// neg\n"
 			"@SP\t\t// A = 0 / M = SP\n"
-			"A=M\t\t// A = SP / M = TOS"
+			"A=M\t\t// A = SP / M = TOS\n"
 			"A=A-1\t\t// Point A at TOS - 1\n"
 			"M=-M\n");
-		else if( strcmp(op, "eq") == 0 ) fprintf(thisCodeWriter->asm_file,
+		else if( strcmp(op, "eq") == 0 )
+		{
+			fpos_t pos;
+			fgetpos(thisCodeWriter->asm_file, &pos);
+			fprintf(thisCodeWriter->asm_file,
 			"// eq\n"
 			"@SP\t\t// Load D with TOS - 1\n"
 			"M=M-1\t\t// SP--\n"
@@ -86,22 +90,27 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op)
 			"D=M\n"
 			"A=A-1\t\t// Point A at TOS - 2\n"
 			"D=D-M\n"
-			"@EQUAL\n"
+			"@EQUAL_%ld\n"
 			"D;JEQ\n"
-			"(NOT_EQUAL)\n"
+			"(NOT_EQUAL_%ld)\n"
 			"D=0\n"
-			"@DONE\n"
+			"@DONE_%ld\n"
 			"0;JEQ\n"
-			"(EQUAL)\n"
+			"(EQUAL_%ld)\n"
 			"D=-1\n"
-			"@DONE\n"
+			"@DONE_%ld\n"
 			"0;JEQ\n"
-			"(DONE)\n"
+			"(DONE_%ld)\n"
 			"@SP\n"
 			"A=M\n"
 			"A=A-1\n"
-			"M=D\n");
-		else if( strcmp(op, "gt") == 0 ) fprintf(thisCodeWriter->asm_file,
+			"M=D\n", pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos);
+		}
+		else if( strcmp(op, "gt") == 0 )
+		{
+			fpos_t pos;
+			fgetpos(thisCodeWriter->asm_file, &pos);
+			fprintf(thisCodeWriter->asm_file,
 			"// gt\n"
 			"@SP\t\t// Load D with TOS - 1\n"
 			"M=M-1\t\t// SP--\n"
@@ -109,22 +118,27 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op)
 			"D=-M\n"
 			"A=A-1\t\t// Point A at TOS - 2\n"
 			"D=D+M\n"
-			"@GREATER_THAN\n"
+			"@GREATER_THAN_%ld\n"
 			"D;JGT\n"
-			"(NOT_GREATER_THAN)\n"
+			"(NOT_GREATER_THAN_%ld)\n"
 			"D=0\n"
-			"@DONE\n"
+			"@DONE_%ld\n"
 			"0;JEQ\n"
-			"(GREATER_THAN)\n"
+			"(GREATER_THAN_%ld)\n"
 			"D=-1\n"
-			"@DONE\n"
+			"@DONE_%ld\n"
 			"0;JEQ\n"
-			"(DONE)\n"
+			"(DONE_%ld)\n"
 			"@SP\n"
 			"A=M\n"
 			"A=A-1\n"
-			"M=D\n");
-		else if( strcmp(op, "lt") == 0 ) fprintf(thisCodeWriter->asm_file,
+			"M=D\n", pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos);
+		}
+		else if( strcmp(op, "lt") == 0 )
+		{
+			fpos_t pos;
+			fgetpos(thisCodeWriter->asm_file, &pos);
+			fprintf(thisCodeWriter->asm_file,
 			"// lt\n"
 			"@SP\t\t// Load D with TOS - 1\n"
 			"M=M-1\t\t// SP--\n"
@@ -132,21 +146,22 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op)
 			"D=-M\n"
 			"A=A-1\t\t// Point A at TOS - 2\n"
 			"D=D+M\n"
-			"@LESS_THAN\n"
+			"@LESS_THAN_%ld\n"
 			"D;JLT\n"
-			"(NOT_LESS_THAN)\n"
+			"(NOT_LESS_THAN_%ld)\n"
 			"D=0\n"
-			"@DONE\n"
+			"@DONE_%ld\n"
 			"0;JEQ\n"
-			"(LESS_THAN)\n"
+			"(LESS_THAN_%ld)\n"
 			"D=-1\n"
-			"@DONE\n"
+			"@DONE_%ld\n"
 			"0;JEQ\n"
-			"(DONE)\n"
+			"(DONE_%ld)\n"
 			"@SP\n"
 			"A=M\n"
 			"A=A-1\n"
-			"M=D\n");
+			"M=D\n", pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos);
+		}
 		else if( strcmp(op, "and") == 0 ) fprintf(thisCodeWriter->asm_file,
 			"// and\n"
 			"@SP\t\t// Load D with TOS - 1\n"
@@ -166,7 +181,7 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op)
 		else if( strcmp(op, "not") == 0 ) fprintf(thisCodeWriter->asm_file,
 			"// neg\n"
 			"@SP\t\t// A = 0 / M = SP\n"
-			"A=M\t\t// A = SP / M = TOS"
+			"A=M\t\t// A = SP / M = TOS\n"
 			"A=A-1\t\t// Point A at TOS - 1\n"
 			"M=!M\n");
 		else err = 3;
