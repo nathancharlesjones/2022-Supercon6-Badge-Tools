@@ -10,7 +10,7 @@ typedef struct CodeWriter_t * CodeWriter;
  *****************************************//**
 * \b Description:
 *
-* Allocates dynamic memory for and nitializes a CodeWriter_t object.
+* Allocates dynamic memory for and initializes a CodeWriter_t object.
 *
 * @param[in] 	asm_file 		File handle for where to write the assembly
 * 								code. File should already have been opened
@@ -68,6 +68,8 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op);
 * that will be pushed on to the stack.
 *
 * @param[in] 	thisCodeWriter	CodeWriter_t object to do the writing with.
+* @param[in]    vm_file         .vm file handle. Used to differentiate uses of static
+*                               variables by different .vm files.
 * @param[in]	command			Must be either C_PUSH or C_POP (see "Parser.h").
 * @param[in]	memory			Memory segment to be pushed from or popped to.
 * 								Valid values are:
@@ -81,11 +83,12 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op);
 * @return       int 			Error code.
 * 									0: No error
 * 									1: thisCodeWriter == NULL
-* 									2: memory == NULL
-* 									3: Unrecognized memory segment
-* 									4: Invalid "pop"; cannot pop into constant memory segment
-* 									5: Command did not match either C_PUSH or C_POP
+* 									2: vm_file == NULL
+*                                   3: memory == NULL
+* 									4: Unrecognized memory segment
+* 									5: Invalid "pop"; cannot pop into constant memory segment
+* 									6: Command did not match either C_PUSH or C_POP
 **/
-int codeWriter_writePushPop(CodeWriter thisCodeWriter, commandType command, char * memory, int offset);
+int codeWriter_writePushPop(CodeWriter thisCodeWriter, FILE * vm_file, commandType command, char * memory, int offset);
 
 #endif //CODEWRITER_H

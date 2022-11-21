@@ -190,16 +190,21 @@ int codeWriter_writeArithmetic(CodeWriter thisCodeWriter, char * op)
 	return err;
 }
 
-int codeWriter_writePushPop(CodeWriter thisCodeWriter, commandType command, char * segment, int value)
+int codeWriter_writePushPop(CodeWriter thisCodeWriter, FILE * vm_file, commandType command, char * segment, int value)
 {
 	int err = 0;
-	enum { LCL_ARG_THS_THT, TEMP, PTR, CONSTANT } segment_type_t;
+	enum { LCL_ARG_THS_THT, TEMP, PTR, CONSTANT, STATIC } segment_type_t;
 	
 	if( thisCodeWriter == NULL ) err = 1;
 
 	if( err == 0 )
 	{
-		if( segment == NULL ) err == 2;
+		if( vm_file == NULL ) err == 2;
+	}
+
+	if( err == 0 )
+	{
+		if( segment == NULL ) err == 3;
 	}
 
 	if( err == 0 )
@@ -239,9 +244,13 @@ int codeWriter_writePushPop(CodeWriter thisCodeWriter, commandType command, char
 		{
 			segment_type_t = CONSTANT;
 		}
+		else if( strcmp(segment, "static") == 0 )
+		{
+			segment_type_t = STATIC;
+		}
 		else
 		{
-			err = 3;
+			err = 4;
 		}
 	}
 
@@ -282,6 +291,11 @@ int codeWriter_writePushPop(CodeWriter thisCodeWriter, commandType command, char
 						"@%d\t\t// Load D with value to push\n"
 						"D=A\n", value);
 					break;
+				case STATIC:
+					fprintf(thisCodeWriter->asm_file,
+						"@%p.%d\t\t// Load D with value to push\n"
+						"D=M\n", vm_file, value);
+					break;
 			}
 
 			fprintf(thisCodeWriter->asm_file,
@@ -293,7 +307,7 @@ int codeWriter_writePushPop(CodeWriter thisCodeWriter, commandType command, char
 
 		else if( command == C_POP )
 		{
-			if( segment_type_t == CONSTANT ) err = 4;
+			if( segment_type_t == CONSTANT ) err = 5;
 			else
 			{
 				fprintf(thisCodeWriter->asm_file, "// pop %s %d\n", segment, value);
@@ -321,10 +335,15 @@ int codeWriter_writePushPop(CodeWriter thisCodeWriter, commandType command, char
 							"@%d\n"
 							"D=D+A\n", value);
 						break;
+					case STATIC:
+						fprintf(thisCodeWriter->asm_file,
+							"@%p.%d\t\t// Compute dest. memory address\n"
+							"D=A\n", vm_file, value);
+						break;
 				}
 
 				fprintf(thisCodeWriter->asm_file,
-					"@13\n"
+					"@R13\n"
 					"M=D\t\t// Store dest. addr. in RAM[13] (temp reg)\n"
 					"@SP\t\t// Load D with value at TOS\n"
 					"M=M-1\t\t// SP--\n"
@@ -335,7 +354,7 @@ int codeWriter_writePushPop(CodeWriter thisCodeWriter, commandType command, char
 					"M=D\n");
 			}
 		}
-		else err == 5;
+		else err == 6;
 	}
 
 	return err;

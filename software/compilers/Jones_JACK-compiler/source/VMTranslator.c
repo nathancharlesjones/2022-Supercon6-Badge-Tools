@@ -20,24 +20,10 @@ int main( int argc, char ** argv )
 	bool asm_file_created = false;
 	CodeWriter codeWriter;
 
-	if( argc != 2 )
-	{
-		err = -1;
-		fprintf(stderr, "Incorrect usage of VMTranslator. Correct usage is './VMTranslator FileName.vm'.\n\r");
-	}
-
-	if( err == 0 )
-	{
-		DEBUG_PRINTF("Before fopen\n");
-		vm_file = fopen(argv[1], "r");
-		DEBUG_PRINTF("After fopen\n");
-		if( vm_file == NULL )
-		{
-			DEBUG_PRINTF("vm_file is NULL\n");
-			err = -1;
-			fprintf(stderr, "Could not open .vm file.\n");
-		}
-	}
+	// Error checking:
+	//    - Filename doesn't end in .vm
+	//    - No filename given and no .vm files in directory
+	
 
 	if( err == 0 )
 	{
@@ -56,7 +42,7 @@ int main( int argc, char ** argv )
 			if( asm_file == NULL )
 			{
 				err = -1;
-				fprintf(stderr, "Could not open .vm file.\n");
+				fprintf(stderr, "Could not open .asm file.\n");
 			}
 			else
 			{
@@ -70,6 +56,19 @@ int main( int argc, char ** argv )
 	{
 		err = codeWriter_new(asm_file, &codeWriter);
 		DEBUG_PRINTF("Created new codeWriter. err = %d\n", err);
+	}
+
+	if( err == 0 )
+	{
+		DEBUG_PRINTF("Before fopen\n");
+		vm_file = fopen(argv[1], "r");
+		DEBUG_PRINTF("After fopen\n");
+		if( vm_file == NULL )
+		{
+			DEBUG_PRINTF("vm_file is NULL\n");
+			err = -1;
+			fprintf(stderr, "Could not open .vm file.\n");
+		}
 	}
 
 	if( err == 0 )
@@ -94,7 +93,10 @@ int main( int argc, char ** argv )
 					// Intentional fall-through of C_PUSH/C_POP
 					case C_PUSH:
 					case C_POP:
-						codeWriter_writePushPop(codeWriter, parser_data.command, parser_data.memory, parser_data.segment);
+						codeWriter_writePushPop(codeWriter, vm_file, parser_data.command, parser_data.memory, parser_data.segment);
+						break;
+					case C_IGNORE:
+						//Ignore comments and newlines
 						break;
 					default:
 						err = -1;

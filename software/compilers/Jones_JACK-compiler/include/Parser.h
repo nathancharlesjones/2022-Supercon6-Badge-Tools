@@ -15,6 +15,7 @@ typedef enum commandType
 	C_FUNCTION,
 	C_RETURN,
 	C_CALL,
+	C_IGNORE,
 	C_UNKNOWN_COMMAND, // For error reporting purposes
 	NUM_COMMAND_TYPES
 } commandType;
