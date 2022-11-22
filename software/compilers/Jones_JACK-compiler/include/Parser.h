@@ -1,8 +1,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#define MAX_CMD_LENGTH 10
-#define MAX_MEM_LENGTH 10
+#define MAX_CMD_STR_LENGTH 10
+#define MAX_ARG1_LENGTH 10
 
 typedef enum commandType
 {
@@ -23,9 +23,9 @@ typedef enum commandType
 typedef struct Parser_t
 {
 	commandType command;
-	char		command_str[MAX_CMD_LENGTH];
-	char		memory[MAX_MEM_LENGTH];
-	int 		segment;
+	char		command_str[MAX_CMD_STR_LENGTH];
+	char		arg1[MAX_ARG1_LENGTH];
+	int 		arg2;
 } Parser_t;
 
 /*********************************************

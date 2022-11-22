@@ -15,7 +15,7 @@ int parse(char * command, Parser_t * parser_data)
 
 	if( err == 0 )
 	{
-		int matched = sscanf(command, "%s %s %d", parser_data->command_str, parser_data->memory, &(parser_data->segment));
+		int matched = sscanf(command, "%s %s %d", parser_data->command_str, parser_data->arg1, &(parser_data->arg2));
 		if( matched > 0 )
 		{
 			if( strcmp(parser_data->command_str, "push") == 0 ) parser_data->command = C_PUSH;
@@ -29,6 +29,9 @@ int parse(char * command, Parser_t * parser_data)
 						( strcmp(parser_data->command_str, "and") == 0 ) ||
 						( strcmp(parser_data->command_str, "or") == 0 ) ||
 						( strcmp(parser_data->command_str, "not") == 0 ) ) parser_data->command = C_ARITHMETIC;
+			else if( strcmp(parser_data->command_str, "label") == 0 ) parser_data->command = C_LABEL;
+			else if( strcmp(parser_data->command_str, "goto") == 0 ) parser_data->command = C_GOTO;
+			else if( strcmp(parser_data->command_str, "if-goto") == 0 ) parser_data->command = C_IF;
 			else if( strcmp(parser_data->command_str, "//") == 0 ) parser_data->command = C_IGNORE;
 			else parser_data->command = C_UNKNOWN_COMMAND;
 		}

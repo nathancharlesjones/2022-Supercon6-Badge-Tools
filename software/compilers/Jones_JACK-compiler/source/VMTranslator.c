@@ -5,7 +5,8 @@
 #include "Parser.h"
 #include "CodeWriter.h"
 
-#define MAX_STRING_LENGTH 64
+#define MAX_STRING_LENGTH 128
+#define MAX_VM_FILENAME 64
 
 #ifdef DEBUG
 #	define DEBUG_PRINTF(...) printf(__VA_ARGS__)
@@ -17,12 +18,18 @@ int main( int argc, char ** argv )
 {
 	int err = 0;
 	FILE *vm_file, *asm_file;
+	char vm_filename[MAX_VM_FILENAME] = {0};
 	bool asm_file_created = false;
-	CodeWriter codeWriter;
 
 	// Error checking:
-	//    - Filename doesn't end in .vm
-	//    - No filename given and no .vm files in directory
+	//    - No arguments or more than one argument given
+	//    - Filename doesn't end in .vm or
+	//    - No .vm files in directory
+	if( argc != 2 )
+	{
+		err = -1;
+		fprintf(stderr, "Invalid usage of VMTranslator. Correct usage is './VMTranslator ARG', where ARG is the path & name for a .vm file or a folder containing one or more .vm files.\n");
+	}
 	
 
 	if( err == 0 )
@@ -33,10 +40,10 @@ int main( int argc, char ** argv )
 		if( asm_filename == NULL ) err = -1;
 		else
 		{
-			char * dot = rindex(argv[1], '.');
-			strncpy(asm_filename, argv[1], dot - argv[1]);
+			// Copy all but the "vm" at the end of the file
+			strncpy(asm_filename, argv[1], strlen(argv[1])-2);
 			DEBUG_PRINTF("ASM filename: %s\tstrlen: %ld\n", asm_filename, strlen(asm_filename));
-			strcat(asm_filename, ".asm");
+			strcat(asm_filename, "asm");
 			DEBUG_PRINTF("ASM filename: %s\tstrlen: %ld\n", asm_filename, strlen(asm_filename));
 			asm_file = fopen(asm_filename, "w");
 			if( asm_file == NULL )
@@ -54,7 +61,7 @@ int main( int argc, char ** argv )
 
 	if( err == 0 )
 	{
-		err = codeWriter_new(asm_file, &codeWriter);
+		err = codeWriter_init(asm_file);
 		DEBUG_PRINTF("Created new codeWriter. err = %d\n", err);
 	}
 
@@ -69,12 +76,31 @@ int main( int argc, char ** argv )
 			err = -1;
 			fprintf(stderr, "Could not open .vm file.\n");
 		}
+		else
+		{
+			char * slash = rindex(argv[1], '\\');
+			if( slash == NULL )
+			{
+				slash = rindex(argv[1], '/');
+				if( slash == NULL )
+				{
+					err = -1;
+					fprintf(stderr, "Invalid filepath for .vm file??\n");
+				}
+			}
+			if( slash != NULL )
+			{
+				strncpy(vm_filename, slash+1, strlen(argv[1]) - (slash - argv[1]) - 4);
+				DEBUG_PRINTF("vm_filename: %s\n", vm_filename);
+			}
+		}
 	}
 
 	if( err == 0 )
 	{
 		DEBUG_PRINTF("Processing vm file\n");
 		// Iterate through .vm file
+		codeWriter_setFilename(vm_filename);
 		while( true )
 		{
 			char buffer[MAX_STRING_LENGTH];
@@ -84,16 +110,25 @@ int main( int argc, char ** argv )
         		DEBUG_PRINTF("vm file has more lines\n");
         		Parser_t parser_data = {0};
         		parse(buffer, &parser_data);
-        		DEBUG_PRINTF("Current command: %d\t%s\t%d\n", parser_data.command, parser_data.memory, parser_data.segment);
+        		DEBUG_PRINTF("Current command: %d\t%s\t%d\n", parser_data.command, parser_data.arg1, parser_data.arg2);
         		switch( parser_data.command )
 				{
 					case C_ARITHMETIC:
-						codeWriter_writeArithmetic(codeWriter, parser_data.command_str);
+						err = codeWriter_writeArithmetic(parser_data.command_str);
 						break;
 					// Intentional fall-through of C_PUSH/C_POP
 					case C_PUSH:
 					case C_POP:
-						codeWriter_writePushPop(codeWriter, vm_file, parser_data.command, parser_data.memory, parser_data.segment);
+						err = codeWriter_writePushPop(parser_data.command, parser_data.arg1, parser_data.arg2);
+						break;
+					case C_LABEL:
+						err = codeWriter_writeLabel(parser_data.arg1);
+						break;
+					case C_GOTO:
+						err = codeWriter_writeGoto(parser_data.arg1);
+						break;
+					case C_IF:
+						err = codeWriter_writeIf(parser_data.arg1);
 						break;
 					case C_IGNORE:
 						//Ignore comments and newlines
