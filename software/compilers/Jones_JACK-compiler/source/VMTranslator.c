@@ -130,6 +130,11 @@ int main( int argc, char ** argv )
 					case C_IF:
 						err = codeWriter_writeIf(parser_data.arg1);
 						break;
+					case C_FUNCTION:
+						err = codeWriter_writeFunction(parser_data.arg1, parser_data.arg2);
+						break;
+					case C_RETURN:
+						err = codeWriter_writeReturn();
 					case C_IGNORE:
 						//Ignore comments and newlines
 						break;

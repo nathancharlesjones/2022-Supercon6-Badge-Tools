@@ -152,4 +152,44 @@ int codeWriter_writeGoto(char * label);
 **/
 int codeWriter_writeIf(char * label);
 
+/*********************************************
+ * Function: codeWriter_writeFunction
+ *****************************************//**
+* \b Description:
+*
+* Emits a function with "name", preparing the local stack by executing
+* "push 0" argc times.
+*
+* @param[in]    name            Name of the function.
+* @param[in]    argc            Number of arguments to the function.
+*
+* @return       int             Error code.
+*                                   0: No error
+*                                   1: CodeWriter not initialized
+*                                   2: name == NULL
+**/
+int codeWriter_writeFunction(char * name, int argc);
+
+/*********************************************
+ * Function: codeWriter_writeReturn
+ *****************************************//**
+* \b Description:
+*
+* Executes a return from a function using the following pseudocode:
+*   frame = LCL
+*   retAddr = *(frame-5)
+*   *ARG = pop()
+*   SP = ARG+1
+*   THAT = *(frame-1)
+*   THIS = *(frame-2)
+*   ARG = *(frame-3)
+*   LCL = *(frame-4)
+*   goto retAddr
+*
+* @return       int             Error code.
+*                                   0: No error
+*                                   1: CodeWriter not initialized
+**/
+int codeWriter_writeReturn(void);
+
 #endif //CODEWRITER_H

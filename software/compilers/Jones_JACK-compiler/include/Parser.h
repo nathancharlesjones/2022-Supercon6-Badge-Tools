@@ -2,7 +2,7 @@
 #define PARSER_H
 
 #define MAX_CMD_STR_LENGTH 10
-#define MAX_ARG1_LENGTH 10
+#define MAX_ARG1_LENGTH 64
 
 typedef enum commandType
 {

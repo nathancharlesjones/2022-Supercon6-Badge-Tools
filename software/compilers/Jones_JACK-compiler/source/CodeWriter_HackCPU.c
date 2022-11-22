@@ -458,3 +458,128 @@ int codeWriter_writeIf(char * label)
 
 	return err;
 }
+
+int codeWriter_writeFunction(char * name, int argc)
+{
+	int err = 0;
+
+	if( !initialized ) err = 1;
+
+	if( err == 0 )
+	{
+		if( name == NULL ) err = 2;
+	}
+
+	/*
+	if( err == 0 )
+	{
+		if( strlen(current_function) == 0 ) err = 3;
+	}
+	*/
+
+	if( err == 0 )
+	{
+		strcpy(current_function, name);
+
+		fprintf(asm_file,
+			"// function %s %d\n"
+			"(%s.%s)\n"
+			"@SP\n"
+			"A=M\n", name, argc, vm_filename, name);
+		for(int i = 0; i < argc; i++)
+		{
+			fprintf(asm_file,
+				"M=0\t\t// push 0\n"
+				"A=A+1\n");
+		}
+		fprintf(asm_file,
+			"D=A\n"
+			"@SP\n"
+			"M=D\n");
+	}
+
+	return err;
+}
+
+int codeWriter_writeReturn(void)
+{
+
+	int err = 0;
+
+	if( !initialized ) err = 1;
+
+	/*
+	if( err == 0 )
+	{
+		if( strlen(current_function) == 0 ) err = 3;
+	}
+	*/
+
+	/*
+	* Executes a return from a function using the following pseudocode:
+	*   frame = LCL
+	*   retAddr = *(frame-5)
+	*   *ARG = pop()
+	*   SP = ARG+1
+	*   THAT = *(frame-1)
+	*   THIS = *(frame-2)
+	*   ARG = *(frame-3)
+	*   LCL = *(frame-4)
+	*   goto retAddr
+	*/
+
+	if( err == 0 )
+	{
+		fprintf(asm_file,
+			"// return\n"
+			"@LCL\t\t// frame = LCL\n"
+			"D=M\n"
+			"@R13\n"
+			"M=D\t\t// frame in R13\n"
+			"@5\t\t// retAddr = *(frame-5)\n"
+			"A=D-A\n"
+			"D=M\n"
+			"@14\n"
+			"M=D\t\t// retAddr in R14\n"
+			"@SP\t\t// *ARG = pop()\n"
+			"A=M\n"
+			"A=A-1\n"
+			"D=M\n"
+			"@ARG\n"
+			"A=M\n"
+			"M=D\n"
+			"@ARG\t\t// SP = ARG+1\n"
+			"D=M+1\n"
+			"@SP\n"
+			"M=D\n"
+			"@R13\t\t// THAT = *(frame-1)\n"
+			"M=M-1\t\t// frame--\n"
+			"A=M\n"
+			"D=M\n"
+			"@THAT\n"
+			"M=D\n"
+			"@R13\t\t// THIS = *(frame-2)\n"
+			"M=M-1\t\t// frame--\n"
+			"A=M\n"
+			"D=M\n"
+			"@THIS\n"
+			"M=D\n"
+			"@R13\t\t// ARG = *(frame-3)\n"
+			"M=M-1\t\t// frame--\n"
+			"A=M\n"
+			"D=M\n"
+			"@ARG\n"
+			"M=D\n"
+			"@R13\t\t// LCL = *(frame-4)\n"
+			"M=M-1\t\t// frame--\n"
+			"A=M\n"
+			"D=M\n"
+			"@LCL\n"
+			"M=D\n"
+			"@R14\t\t// goto retAddr\n"
+			"A=M\n"
+			"0;JEQ\n");
+	}
+
+	return err;
+}
