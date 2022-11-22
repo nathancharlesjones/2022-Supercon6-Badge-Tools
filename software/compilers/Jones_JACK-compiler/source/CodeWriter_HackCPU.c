@@ -485,7 +485,7 @@ int codeWriter_writeFunction(char * name, int argc)
 			"// function %s %d\n"
 			"(%s.%s)\n"
 			"@SP\n"
-			"A=M\n", name, argc, vm_filename, name);
+			"A=M\n", current_function, argc, vm_filename, current_function);
 		for(int i = 0; i < argc; i++)
 		{
 			fprintf(asm_file,
@@ -530,6 +530,8 @@ int codeWriter_writeReturn(void)
 
 	if( err == 0 )
 	{
+		memset(current_function, 0, strlen(current_function));
+
 		fprintf(asm_file,
 			"// return\n"
 			"@LCL\t\t// frame = LCL\n"
