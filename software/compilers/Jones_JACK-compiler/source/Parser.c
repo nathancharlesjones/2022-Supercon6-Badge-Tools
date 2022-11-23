@@ -34,6 +34,7 @@ int parse(char * command, Parser_t * parser_data)
 			else if( strcmp(parser_data->command_str, "if-goto") == 0 ) parser_data->command = C_IF;
 			else if( strcmp(parser_data->command_str, "function") == 0 ) parser_data->command = C_FUNCTION;
 			else if( strcmp(parser_data->command_str, "return") == 0 ) parser_data->command = C_RETURN;
+			else if( strcmp(parser_data->command_str, "call") == 0 ) parser_data->command = C_CALL;
 			else if( strcmp(parser_data->command_str, "//") == 0 ) parser_data->command = C_IGNORE;
 			else parser_data->command = C_UNKNOWN_COMMAND;
 		}

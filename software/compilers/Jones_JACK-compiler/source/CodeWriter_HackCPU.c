@@ -22,8 +22,9 @@ bool 		initialized = false;
 FILE 		*asm_file;
 const char 	*vm_filename;
 char		current_function[MAX_FCN_NAME_LEN] = {0};
+int  		return_count = 0;
 
-int codeWriter_init(FILE * new_asm_file)
+int codeWriter_init(char * new_asm_file)
 {
 	int err = 0;
 
@@ -36,10 +37,25 @@ int codeWriter_init(FILE * new_asm_file)
 
 	if( err == 0 )
 	{
-		asm_file = new_asm_file;
-		initialized = true;
+		asm_file = fopen(new_asm_file, "w");
+		if( asm_file )
+		{
+			initialized = true;
+			// Write bootstrap code:
+			//    SP = 256
+			//    call Sys.init
+			fprintf(asm_file,
+				"// Bootstrap code\n"
+				"@256\t\t// SP = 256\n"
+				"D=A\n"
+				"@SP\n"
+				"M=D\n"
+				"@Sys.init\n"
+				"0;JEQ\n");
+		}
+		else err = 3;
 	}
-	
+
 	return err;
 }
 
@@ -459,7 +475,7 @@ int codeWriter_writeIf(char * label)
 	return err;
 }
 
-int codeWriter_writeFunction(char * name, int argc)
+int codeWriter_writeFunction(char * name, int nVars)
 {
 	int err = 0;
 
@@ -479,14 +495,22 @@ int codeWriter_writeFunction(char * name, int argc)
 
 	if( err == 0 )
 	{
+		memset(current_function, 0, strlen(current_function));
 		strcpy(current_function, name);
 
+		/*
 		fprintf(asm_file,
 			"// function %s %d\n"
 			"(%s.%s)\n"
 			"@SP\n"
-			"A=M\n", current_function, argc, vm_filename, current_function);
-		for(int i = 0; i < argc; i++)
+			"A=M\n", current_function, nVars, vm_filename, current_function);
+		*/
+		fprintf(asm_file,
+			"// function %s %d\n"
+			"(%s)\n"
+			"@SP\n"
+			"A=M\n", current_function, nVars, current_function);
+		for(int i = 0; i < nVars; i++)
 		{
 			fprintf(asm_file,
 				"M=0\t\t// push 0\n"
@@ -530,8 +554,6 @@ int codeWriter_writeReturn(void)
 
 	if( err == 0 )
 	{
-		memset(current_function, 0, strlen(current_function));
-
 		fprintf(asm_file,
 			"// return\n"
 			"@LCL\t\t// frame = LCL\n"
@@ -581,6 +603,98 @@ int codeWriter_writeReturn(void)
 			"@R14\t\t// goto retAddr\n"
 			"A=M\n"
 			"0;JEQ\n");
+	}
+
+	return err;
+}
+
+int codeWriter_writeCall(char * name, int nArgs)
+{
+	int err = 0;
+
+	if( !initialized ) err = 1;
+
+	if( err == 0 )
+	{
+		if( name == NULL ) err = 2;
+	}
+
+	/*
+	if( err == 0 )
+	{
+		if( strlen(current_function) == 0 ) err = 3;
+	}
+	*/
+
+	if( err == 0 )
+	{
+		fprintf(asm_file, "// call %s %d\n", name, nArgs);
+		fprintf(asm_file, "@%s$ret.%d\t\t// push retAddr\n", name, return_count);
+		fprintf(asm_file, 
+			"D=A\n"
+			"@SP\n"
+			"A=M\n"
+			"M=D\n"
+			"@SP\n"
+			"M=M+1\n"
+			"@LCL\t\t// push LCL\n"
+			"D=M\n"
+			"@SP\n"
+			"A=M\n"
+			"M=D\n"
+			"@SP\n"
+			"M=M+1\n"
+			"@ARG\t\t// push ARG\n"
+			"D=M\n"
+			"@SP\n"
+			"A=M\n"
+			"M=D\n"
+			"@SP\n"
+			"M=M+1\n"
+			"@THIS\t\t// push THIS\n"
+			"D=M\n"
+			"@SP\n"
+			"A=M\n"
+			"M=D\n"
+			"@SP\n"
+			"M=M+1\n"
+			"@THAT\t\t// push THAT\n"
+			"D=M\n"
+			"@SP\n"
+			"A=M\n"
+			"M=D\n"
+			"@SP\n"
+			"M=M+1\n"
+			"@SP\t\t// ARG = SP - 5 - nArgs\n"
+			"D=M\n"
+			"@5\n"
+			"D=D-A\n"
+			"@%d\n"
+			"D=D-A\n"
+			"@ARG\n"
+			"M=D\n"
+			"@SP\t\t// LCL = SP\n"
+			"D=M\n"
+			"@LCL\n"
+			"M=D\n"
+			"@%s\t\t// goto name\n"
+			"0;JEQ\n"
+			"(%s$ret.%d)\t\t// (retAddr)\n", nArgs, name, name, return_count);
+		return_count++;
+	}
+
+	return err;
+}
+
+int codeWriter_close(void)
+{
+	int err = 0;
+
+	if( !initialized ) err = 1;
+
+	if( err == 0 )
+	{
+		fclose(asm_file);
 	}
 
 	return err;

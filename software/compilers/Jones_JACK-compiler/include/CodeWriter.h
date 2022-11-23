@@ -12,16 +12,16 @@
 *
 * Initializes the CodeWriter.
 *
-* @param[in] 	asm_file 		File handle for where to write the assembly
-* 								code. File should already have been opened
-* 								with a valid file path.
+* @param[in] 	asm_filename	File path and name for where to write the 
+*                               assembly code.
 *
 * @return       int 			Error code.
 * 									0: No error
 * 									1: CodeWriter already initialized
-*                                   2: this_asm_file == NULL
+*                                   2: asm_filename == NULL
+*                                   3: Could not open asm_file
 **/
-int codeWriter_init(FILE * asm_file);
+int codeWriter_init(char * asm_filename);
 
 /*********************************************
  * Function: codeWriter_setFilename
@@ -158,17 +158,17 @@ int codeWriter_writeIf(char * label);
 * \b Description:
 *
 * Emits a function with "name", preparing the local stack by executing
-* "push 0" argc times.
+* "push 0" nVars times (once for each local variable).
 *
 * @param[in]    name            Name of the function.
-* @param[in]    argc            Number of arguments to the function.
+* @param[in]    nVars           Number of arguments to the function.
 *
 * @return       int             Error code.
 *                                   0: No error
 *                                   1: CodeWriter not initialized
 *                                   2: name == NULL
 **/
-int codeWriter_writeFunction(char * name, int argc);
+int codeWriter_writeFunction(char * name, int nVars);
 
 /*********************************************
  * Function: codeWriter_writeReturn
@@ -191,5 +191,42 @@ int codeWriter_writeFunction(char * name, int argc);
 *                                   1: CodeWriter not initialized
 **/
 int codeWriter_writeReturn(void);
+
+/*********************************************
+ * Function: codeWriter_writeCall
+ *****************************************//**
+* \b Description:
+*
+* Executes a call to a function that takes nArgs arguments using
+* the following pseudocode:
+*   push retAddr
+*   push LCL
+*   push ARG
+*   push THIS
+*   push THAT
+*   ARG = SP - 5 - nArgs
+*   LCL = SP
+*   goto name
+*   (retAddr)
+*
+* @return       int             Error code.
+*                                   0: No error
+*                                   1: CodeWriter not initialized
+*                                   2: name == NULL
+**/
+int codeWriter_writeCall(char * name, int nArgs);
+
+/*********************************************
+ * Function: codeWriter_close
+ *****************************************//**
+* \b Description:
+*
+* Terminates writing the assembly file and closes it.
+*
+* @return       int             Error code.
+*                                   0: No error
+*                                   1: CodeWriter not initialized
+**/
+int codeWriter_close(void);
 
 #endif //CODEWRITER_H
