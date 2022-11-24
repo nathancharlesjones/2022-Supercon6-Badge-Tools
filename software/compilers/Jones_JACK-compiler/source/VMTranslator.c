@@ -163,12 +163,14 @@ int main( int argc, char ** argv )
 
 	}
 
+	/*
 	DEBUG_PRINTF("VM files:\n");
 	for( int i = 0; i < num_vm_files; i++ )
 	{
 		DEBUG_PRINTF("\t%s\n", list_of_vm_files[i]);
 	}
 	DEBUG_PRINTF("ASM file: %s\n", asm_filename);
+	*/
 
 	// Initialize codeWriter (creates ".asm" file and writes bootstrap code)
 	if( err == 0 )
@@ -273,66 +275,6 @@ int main( int argc, char ** argv )
 	
 	// if asm_file_created: close asm_file
 	if( asm_file_created ) codeWriter_close();
-
-	/*
-	if( err == 0 )
-	{
-		DEBUG_PRINTF("strlen .vm filename: %ld\n", strlen(argv[1]));
-		// Add 2; one for nul (not included in strlen) and one to go from ".vm" to ".asm"
-		char * asm_filename = calloc(1, strlen(argv[1])+2);
-		if( asm_filename == NULL ) err = -1;
-		else
-		{
-			// Copy all but the "vm" at the end of the file
-			strncpy(asm_filename, argv[1], strlen(argv[1])-2);
-			DEBUG_PRINTF("ASM filename: %s\tstrlen: %ld\n", asm_filename, strlen(asm_filename));
-			strcat(asm_filename, "asm");
-			DEBUG_PRINTF("ASM filename: %s\tstrlen: %ld\n", asm_filename, strlen(asm_filename));
-			asm_file = fopen(asm_filename, "w");
-			if( asm_file == NULL )
-			{
-				err = -1;
-				fprintf(stderr, "Could not open .asm file.\n");
-			}
-			else
-			{
-				asm_file_created = true;
-				DEBUG_PRINTF("Created asm file\n");
-			}
-		}
-	}
-
-	if( err == 0 )
-	{
-		DEBUG_PRINTF("Before fopen\n");
-		vm_file = fopen(argv[1], "r");
-		DEBUG_PRINTF("After fopen\n");
-		if( vm_file == NULL )
-		{
-			DEBUG_PRINTF("vm_file is NULL\n");
-			err = -1;
-			fprintf(stderr, "Could not open .vm file.\n");
-		}
-		else
-		{
-			char * slash = rindex(argv[1], '\\');
-			if( slash == NULL )
-			{
-				slash = rindex(argv[1], '/');
-				if( slash == NULL )
-				{
-					err = -1;
-					fprintf(stderr, "Invalid filepath for .vm file??\n");
-				}
-			}
-			if( slash != NULL )
-			{
-				strncpy(vm_filename, slash+1, strlen(argv[1]) - (slash - argv[1]) - 4);
-				DEBUG_PRINTF("vm_filename: %s\n", vm_filename);
-			}
-		}
-	}
-	*/
 
 	return err;
 }
