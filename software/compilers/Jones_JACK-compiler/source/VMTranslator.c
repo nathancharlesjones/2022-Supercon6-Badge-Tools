@@ -3,12 +3,13 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <dirent.h>
+#include <libgen.h>
 #include "Parser.h"
 #include "CodeWriter.h"
 
 #define MAX_VM_COMMAND_LENGTH 128
-#define MAX_FOLDER_NAME_LEN 128
-#define MAX_FILE_NAME_LEN 64
+#define MAX_FOLDER_NAME_LEN 256
+#define MAX_FILE_NAME_LEN 128
 
 #ifdef DEBUG
 #	define DEBUG_PRINTF(...) printf(__VA_ARGS__)
@@ -77,20 +78,27 @@ int main( int argc, char ** argv )
 	// if success:
 	if( folder != NULL )
 	{
-		slash = ( index(argv[1], '/') != NULL ) ? '/' : '\\';
-		strcpy(project_folder, argv[1]);
+		// Expand directory to full path and copy to project_folder
+		realpath(argv[1], project_folder);
 
-		if( project_folder[strlen(project_folder)-1] == slash )
-		{
-			project_folder[strlen(project_folder)-1] = '\0';
-		}
-		char * last_slash = rindex(project_folder, slash);
-		size_t name_len = strlen(last_slash+1);
-		project_folder[strlen(project_folder)] = slash;
+		// Determine if forward or backward slashes are used
+		slash = ( index(project_folder, '/') != NULL ) ? '/' : '\\';
+
+		// Add trailing slash back to project_folder
+		strncat(project_folder, &slash, 1);
+
+		// Copy project_folder to asm_filename
 		strcpy(asm_filename, project_folder);
-		strncat(asm_filename, last_slash+1, name_len);
+		
+		// Copy directory name to asm_filename
+		char buffer[MAX_FOLDER_NAME_LEN+MAX_FILE_NAME_LEN] = {0};
+		strcpy(buffer, project_folder);
+		strcat(asm_filename, basename(buffer));
+
+		// Add file extension to asm_filename
 		strcat(asm_filename, ".asm");
-		DEBUG_PRINTF("Project folder: %s\n", project_folder);
+		
+		DEBUG_PRINTF("Project folder: %s %s\n", project_folder, project_folder+strlen(project_folder));
 		DEBUG_PRINTF("ASM filename: %s\n", asm_filename);
 
 		struct dirent * entry;
@@ -163,15 +171,13 @@ int main( int argc, char ** argv )
 
 	}
 
-	/*
 	DEBUG_PRINTF("VM files:\n");
 	for( int i = 0; i < num_vm_files; i++ )
 	{
 		DEBUG_PRINTF("\t%s\n", list_of_vm_files[i]);
 	}
 	DEBUG_PRINTF("ASM file: %s\n", asm_filename);
-	*/
-
+	
 	// Initialize codeWriter (creates ".asm" file and writes bootstrap code)
 	if( err == 0 )
 	{
