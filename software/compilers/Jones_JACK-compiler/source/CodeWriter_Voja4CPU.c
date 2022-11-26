@@ -7,11 +7,11 @@
 
 /*
 ┌────┬─────┬─────┬─────┬─────┐
-│Name│ SP  │     │     │ TOS │
+│Name│ SP  │ TOS │     │     │
 ├────┼─────┼─────┼─────┼─────┤
-│Addr│  0  │ X-2 │ X-1 │  X  │
+│Addr│  0  │  X  │ X+1 │ X+2 │
 ├────┼─────┼─────┼─────┼─────┤
-│Data│ TOS │  #  │  #  │  0  │
+│Data│ TOS │  0  │ #_h │ #_l │
 └────┴─────┴─────┴─────┴─────┘
 // &SP = 0
 // int * SP = &TOS
@@ -42,16 +42,13 @@ int codeWriter_init(char * new_asm_file)
 		{
 			initialized = true;
 			// Write bootstrap code:
-			//    SP = 256
+			//    SP = xDF
 			//    call Sys.init
 			fprintf(asm_file,
 				"// Bootstrap code\n"
-				"@256\t\t// SP = 256\n"
-				"D=A\n"
-				"@SP\n"
-				"M=D\n"
-				"@Sys.init\n"
-				"0;JEQ\n");
+				"MOV R1, 0xF\t\t// SP = 0xDF\n"
+				"MOV R0, 0xD\n"
+				"jr Sys.init\n");
 		}
 		else err = 3;
 	}
@@ -90,132 +87,210 @@ int codeWriter_writeArithmetic(char * op)
 	{
 		if( strcmp(op, "add") == 0 ) fprintf(asm_file,
 			"// add\n"
-			"@SP\t\t// Load D with TOS - 1\n"
-			"M=M-1\t\t// SP--\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"D=M\n"
-			"A=A-1\t\t// Point A at TOS - 2\n"
-			"M=D+M\n");
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R2, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R3, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R4, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R5, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"ADD R3, R5\n"
+			"ADC R2, R4\n"
+			"MOV R3, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n"
+			"MOV R2, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n");
 		else if( strcmp(op, "sub") == 0 ) fprintf(asm_file,
 			"// sub\n"
-			"@SP\t\t// Load D with TOS - 1\n"
-			"M=M-1\t\t// SP--\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"D=M\n"
-			"A=A-1\t\t// Point A at TOS - 2\n"
-			"M=M-D\n");
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R2, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R3, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R4, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R5, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"SUB R5, R3\n"
+			"SBB R4, R2\n"
+			"MOV R5, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n"
+			"MOV R4, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n");
 		else if( strcmp(op, "neg") == 0 ) fprintf(asm_file,
 			"// neg\n"
-			"@SP\t\t// A = 0 / M = SP\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"A=A-1\t\t// Point A at TOS - 1\n"
-			"M=-M\n");
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R2, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R3, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"XOR R3, 1\n"
+			"XOR R2, 1\n"
+			"ADD R3, 1\n"
+			"ADC R2, 0\n"
+			"MOV R3, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n"
+			"MOV R2, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n");
 		else if( strcmp(op, "eq") == 0 )
 		{
 			fpos_t pos;
 			fgetpos(asm_file, &pos);
 			fprintf(asm_file,
-			"// eq\n"
-			"@SP\t\t// Load D with TOS - 1\n"
-			"M=M-1\t\t// SP--\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"D=M\n"
-			"A=A-1\t\t// Point A at TOS - 2\n"
-			"D=D-M\n"
-			"@EQUAL_%ld\n"
-			"D;JEQ\n"
-			"(NOT_EQUAL_%ld)\n"
-			"D=0\n"
-			"@DONE_%ld\n"
-			"0;JEQ\n"
-			"(EQUAL_%ld)\n"
-			"D=-1\n"
-			"@DONE_%ld\n"
-			"0;JEQ\n"
-			"(DONE_%ld)\n"
-			"@SP\n"
-			"A=M\n"
-			"A=A-1\n"
-			"M=D\n", pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos);
+			"// eq\n"			
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R2, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R3, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R4, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R5, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"SUB R5, R3\n"
+			"SKIP Z, 1\n"
+			"jr not_equal_%ld\n"
+			"SBB R4, R2\n"
+			"SKIP Z, 1\n"
+			"jr not_equal_%ld\n"
+			"MOV R3, 0xF\n"
+			"MOV R2, 0xF\n"
+			"jr done_%ld\n"
+			"not_equal_%ld:\n"
+			"MOV R3, 0x0\n"
+			"MOV R2, 0x0\n"
+			"done_%ld:\n"
+			"MOV R3, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n"
+			"MOV R2, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n", pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos);
 		}
 		else if( strcmp(op, "gt") == 0 )
 		{
 			fpos_t pos;
 			fgetpos(asm_file, &pos);
 			fprintf(asm_file,
-			"// gt\n"
-			"@SP\t\t// Load D with TOS - 1\n"
-			"M=M-1\t\t// SP--\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"D=-M\n"
-			"A=A-1\t\t// Point A at TOS - 2\n"
-			"D=D+M\n"
-			"@GREATER_THAN_%ld\n"
-			"D;JGT\n"
-			"(NOT_GREATER_THAN_%ld)\n"
-			"D=0\n"
-			"@DONE_%ld\n"
-			"0;JEQ\n"
-			"(GREATER_THAN_%ld)\n"
-			"D=-1\n"
-			"@DONE_%ld\n"
-			"0;JEQ\n"
-			"(DONE_%ld)\n"
-			"@SP\n"
-			"A=M\n"
-			"A=A-1\n"
-			"M=D\n", pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos);
+			"// gt\n"			
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R2, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R3, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R4, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R5, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"SUB R3, R5\n"
+			"SBB R2, R4\n"
+			"BIT R2, 3\n"
+			"SKIP NZ, 1\n"
+			// y >= x
+			"jr not_greater_than_%ld\n"
+			// y < x
+			"MOV R3, 0xF\n"
+			"MOV R2, 0xF\n"
+			"jr done_%ld\n"
+			"not_greater_than_%ld:\n"
+			"MOV R3, 0x0\n"
+			"MOV R2, 0x0\n"
+			"done_%ld:\n"
+			"MOV R3, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n"
+			"MOV R2, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n", pos.__pos, pos.__pos, pos.__pos, pos.__pos);
 		}
 		else if( strcmp(op, "lt") == 0 )
 		{
 			fpos_t pos;
 			fgetpos(asm_file, &pos);
 			fprintf(asm_file,
-			"// lt\n"
-			"@SP\t\t// Load D with TOS - 1\n"
-			"M=M-1\t\t// SP--\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"D=-M\n"
-			"A=A-1\t\t// Point A at TOS - 2\n"
-			"D=D+M\n"
-			"@LESS_THAN_%ld\n"
-			"D;JLT\n"
-			"(NOT_LESS_THAN_%ld)\n"
-			"D=0\n"
-			"@DONE_%ld\n"
-			"0;JEQ\n"
-			"(LESS_THAN_%ld)\n"
-			"D=-1\n"
-			"@DONE_%ld\n"
-			"0;JEQ\n"
-			"(DONE_%ld)\n"
-			"@SP\n"
-			"A=M\n"
-			"A=A-1\n"
-			"M=D\n", pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos, pos.__pos);
+			"// lt\n"			);
 		}
 		else if( strcmp(op, "and") == 0 ) fprintf(asm_file,
 			"// and\n"
-			"@SP\t\t// Load D with TOS - 1\n"
-			"M=M-1\t\t// SP--\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"D=M\n"
-			"A=A-1\t\t// Point A at TOS - 2\n"
-			"M=D&M\n");
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R2, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R3, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R4, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R5, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"AND R3, R5\n"
+			"AND R2, R4\n"
+			"MOV R3, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n"
+			"MOV R3, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n");
 		else if( strcmp(op, "or") == 0 ) fprintf(asm_file,
 			"// or\n"
-			"@SP\t\t// Load D with TOS - 1\n"
-			"M=M-1\t\t// SP--\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"D=M\n"
-			"A=A-1\t\t// Point A at TOS - 2\n"
-			"M=D|M\n");
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R2, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R3, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R4, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R5, [R0:R1]\t\t// Load R4/5 with TOS + 2\n"
+			"OR R3, R5\n"
+			"OR R2, R4\n"
+			"MOV R3, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n"
+			"MOV R3, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n");
 		else if( strcmp(op, "not") == 0 ) fprintf(asm_file,
 			"// neg\n"
-			"@SP\t\t// A = 0 / M = SP\n"
-			"A=M\t\t// A = SP / M = TOS\n"
-			"A=A-1\t\t// Point A at TOS - 1\n"
-			"M=!M\n");
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R2, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"INC R1\t\t// SP++\n"
+			"ADC R0, 0\n"
+			"MOV R3, [R0:R1]\t\t// Load R2/3 with TOS + 1\n"
+			"XOR R3, 1\n"
+			"XOR R2, 1\n"
+			"MOV R3, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n"
+			"MOV R3, [R0:R1]\n"
+			"DEC R1\t\t// SP--\n"
+			"SBB R0, 0\n");
 		else err = 3;
 	}
 
@@ -407,7 +482,7 @@ int codeWriter_writeLabel(char * label)
 
 	if( err == 0 )
 	{
-		fprintf(asm_file, "(%s.%s$%s)\n", vm_filename, current_function, label);
+		fprintf(asm_file, "%s.%s$%s:\n", vm_filename, current_function, label);
 	}
 
 	return err;
@@ -435,8 +510,7 @@ int codeWriter_writeGoto(char * label)
 	{
 		fprintf(asm_file,
 			"// goto %s\n"
-			"@%s.%s$%s\n"
-			"0;JEQ\n", label, vm_filename, current_function, label);
+			"jr %s.%s$%s\n", label, vm_filename, current_function, label);
 	}
 
 	return err;
@@ -468,8 +542,7 @@ int codeWriter_writeIf(char * label)
 			"M=M-1\t\t// SP--\n"
 			"A=M\n"
 			"D=M\n"
-			"@%s.%s$%s\n"
-			"D;JNE\n", label, vm_filename, current_function, label);
+			"jr %s.%s$%s\n", label, vm_filename, current_function, label);
 	}
 
 	return err;
