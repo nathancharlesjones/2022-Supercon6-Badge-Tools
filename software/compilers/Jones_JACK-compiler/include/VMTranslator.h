@@ -12,9 +12,9 @@
 #	define DEBUG_PRINTF(...)
 #endif
 
-char type_of_slash_used_in_argv1(char * argv1);
-void extract_project_folder_and_asm_filename_from_argv1(char * argv1, char * project_folder, char * asm_filename);
+void extract_project_folder_and_asm_filename_from_directory(char * argv1, char * project_folder, char * asm_filename);
 void extract_vm_files_from_directory(DIR * folder, char * project_folder, char *** list_of_vm_files, int * num_vm_files);
 void set_codeWriter_vm_filename(char * vm_full);
+void process_vm_command(char * buffer);
 
 #endif // VMTRANSLATOR_H

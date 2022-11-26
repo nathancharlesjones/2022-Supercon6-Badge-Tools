@@ -11,16 +11,13 @@
 
 int main( int argc, char ** argv )
 {
-	FILE *asm_file;
-	char slash = 0;
 	char ** list_of_vm_files = NULL;
 	int num_vm_files = 0;
-	char project_folder[MAX_FOLDER_NAME_LEN] = {0};
 	char asm_filename[MAX_FOLDER_NAME_LEN + MAX_FILE_NAME_LEN] = {0};
 
 	ASSERT( argc == 2, "Invalid usage of VMTranslator. Correct usage is './VMTranslator ARG', where ARG is the path & name for a .vm file or a folder containing one or more .vm files.\n" );
 	
-	// STEP 1: Determine if 
+	//get_list_of_vm_files(argv[1], list_of_vm_files, num_vm_files);
 
 	// Attempt to open argv[1] as a folder
 	DIR * folder = opendir(argv[1]);
@@ -28,9 +25,9 @@ int main( int argc, char ** argv )
 	// if success:
 	if( folder != NULL )
 	{
-		extract_project_folder_and_asm_filename_from_argv1(argv[1], project_folder, asm_filename);
-
-		slash = type_of_slash_used_in_argv1(project_folder);		
+		char project_folder[MAX_FOLDER_NAME_LEN] = {0};
+		
+		extract_project_folder_and_asm_filename_from_directory(argv[1], project_folder, asm_filename);
 
 		DEBUG_PRINTF("Project folder: %s\n", project_folder);
 		DEBUG_PRINTF("ASM filename: %s\n", asm_filename);
@@ -94,47 +91,7 @@ int main( int argc, char ** argv )
 	        if( done != NULL )
         	{
         		DEBUG_PRINTF("vm file has more lines\n");
-
-				// parse data
-        		Parser_t parser_data = {0};						
-        		parse(buffer, &parser_data);
-        		DEBUG_PRINTF("Current command: %d\t%s\t%d\n", parser_data.command, parser_data.arg1, parser_data.arg2);
-				
-				// call appropriate codeWriter function
-        		switch( parser_data.command )
-				{
-					case C_ARITHMETIC:
-						ASSERT(codeWriter_writeArithmetic(parser_data.command_str) == NO_ERR, "Could not write arithmetic command.\n");
-						break;
-					// Intentional fall-through of C_PUSH/C_POP
-					case C_PUSH:
-					case C_POP:
-						ASSERT(codeWriter_writePushPop(parser_data.command, parser_data.arg1, parser_data.arg2) == NO_ERR, "Could not write push/pop command.\n");
-						break;
-					case C_LABEL:
-						ASSERT(codeWriter_writeLabel(parser_data.arg1) == NO_ERR, "Could not write label.\n");
-						break;
-					case C_GOTO:
-						ASSERT(codeWriter_writeGoto(parser_data.arg1) == NO_ERR, "Could not write goto.\n");
-						break;
-					case C_IF:
-						ASSERT(codeWriter_writeIf(parser_data.arg1) == NO_ERR, "Could not write if-goto.\n");
-						break;
-					case C_FUNCTION:
-						ASSERT(codeWriter_writeFunction(parser_data.arg1, parser_data.arg2) == NO_ERR, "Could not write function.\n");
-						break;
-					case C_RETURN:
-						ASSERT(codeWriter_writeReturn() == NO_ERR, "Could not write return command.\n");
-						break;
-					case C_CALL:
-						ASSERT(codeWriter_writeCall(parser_data.arg1, parser_data.arg2) == NO_ERR, "Could not write call command.\n");
-						break;
-					case C_IGNORE:
-						//Ignore comments and newlines
-						break;
-					default:
-						ASSERT(0, "Unrecognized VM command.\n");
-				}
+        		process_vm_command(buffer);
     		}
 	        else break;
 	    }
@@ -148,12 +105,7 @@ int main( int argc, char ** argv )
 	return 0;
 }
 
-char type_of_slash_used_in_argv1(char * argv1)
-{
-	return ( index(argv1, '/') != NULL ) ? '/' : '\\';
-}
-
-void extract_project_folder_and_asm_filename_from_argv1(char * argv1, char * project_folder, char * asm_filename)
+void extract_project_folder_and_asm_filename_from_directory(char * argv1, char * project_folder, char * asm_filename)
 {
 	// Expand directory to full path and copy to project_folder
 	realpath(argv1, project_folder);
@@ -214,4 +166,48 @@ void set_codeWriter_vm_filename(char * vm_full)
 	vm_filename[strlen(vm_filename)-3] = '\0';
 	DEBUG_PRINTF("vm_filename: %s\n", vm_filename);
 	codeWriter_setFilename(vm_filename);
+}
+
+void process_vm_command(char * buffer)
+{
+	// parse data
+	Parser_t parser_data = {0};						
+	parse(buffer, &parser_data);
+	DEBUG_PRINTF("Current command: %d\t%s\t%d\n", parser_data.command, parser_data.arg1, parser_data.arg2);
+	
+	// call appropriate codeWriter function
+	switch( parser_data.command )
+	{
+		case C_ARITHMETIC:
+			ASSERT(codeWriter_writeArithmetic(parser_data.command_str) == NO_ERR, "Could not write arithmetic command.\n");
+			break;
+		// Intentional fall-through of C_PUSH/C_POP
+		case C_PUSH:
+		case C_POP:
+			ASSERT(codeWriter_writePushPop(parser_data.command, parser_data.arg1, parser_data.arg2) == NO_ERR, "Could not write push/pop command.\n");
+			break;
+		case C_LABEL:
+			ASSERT(codeWriter_writeLabel(parser_data.arg1) == NO_ERR, "Could not write label.\n");
+			break;
+		case C_GOTO:
+			ASSERT(codeWriter_writeGoto(parser_data.arg1) == NO_ERR, "Could not write goto.\n");
+			break;
+		case C_IF:
+			ASSERT(codeWriter_writeIf(parser_data.arg1) == NO_ERR, "Could not write if-goto.\n");
+			break;
+		case C_FUNCTION:
+			ASSERT(codeWriter_writeFunction(parser_data.arg1, parser_data.arg2) == NO_ERR, "Could not write function.\n");
+			break;
+		case C_RETURN:
+			ASSERT(codeWriter_writeReturn() == NO_ERR, "Could not write return command.\n");
+			break;
+		case C_CALL:
+			ASSERT(codeWriter_writeCall(parser_data.arg1, parser_data.arg2) == NO_ERR, "Could not write call command.\n");
+			break;
+		case C_IGNORE:
+			//Ignore comments and newlines
+			break;
+		default:
+			ASSERT(0, "Unrecognized VM command.\n");
+	}
 }
