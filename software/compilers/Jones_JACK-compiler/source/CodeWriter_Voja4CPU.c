@@ -325,7 +325,7 @@ int codeWriter_writeArithmetic(char * op)
 int codeWriter_writePushPop(commandType command, char * segment, int value)
 {
 	int err = 0;
-	enum { LCL_ARG_THS_THT, TEMP, PTR, CONSTANT, STATIC } segment_type_t;
+	enum { LOCAL, ARGUMENT, THIS, THAT, TEMP, PTR, CONSTANT, STATIC } segment_type_t;
 	
 	if( !initialized ) err = 1;
 
@@ -334,6 +334,7 @@ int codeWriter_writePushPop(commandType command, char * segment, int value)
 		if( segment == NULL ) err == 3;
 	}
 
+/*
 	if( err == 0 )
 	{
 		if(	( strcmp(segment, "local") == 0 ) ||
@@ -380,43 +381,217 @@ int codeWriter_writePushPop(commandType command, char * segment, int value)
 			err = 4;
 		}
 	}
+	*/
 
 	if( err == 0 )
 	{
 		if( command == C_PUSH )
 		{
 			fprintf(asm_file, "// push %s %d\n", segment, value);
+			fprintf(asm_file,
+				"MOV R0, R7\t\t// Push down TOS\n"
+				"MOV R0, [R8:R9]\n"
+				"INC R9\n"
+				"ADC R8, 0\n"
+				"MOV R0, R6\n"
+				"MOV R0, [R8:R9]\n"
+				"INC R9\n"
+				"ADC R8, 0\n"
+				"MOV R0, R5\n"
+				"MOV R0, [R8:R9]\n"
+				"INC R9\n"
+				"ADC R8, 0\n"
+				"MOV R0, R4\n"
+				"MOV R0, [R8:R9]\n"
+				"INC R9\n"
+				"ADC R8, 0\n");
+
+			if( strcmp(segment, "constant") == 0 )
+			{
+				fprintf(asm_file, "MOV R7, %d\n", value & 0xF);
+				fprintf(asm_file, "MOV R6, %d\n", (value & 0xF0)>>4);
+				fprintf(asm_file, "MOV R5, %d\n", (value & 0xF00)>>8);
+				fprintf(asm_file, "MOV R4, %d\n", (value & 0xF000)>>12);
+			}
+			else if (	( strcmp(segment, "local") == 0 ) ||
+						( strcmp(segment, "argument") == 0 ) ||
+						( strcmp(segment, "this") == 0 ) ||
+						( strcmp(segment, "that") == 0 ) ||
+						( strcmp(segment, "pointer") == 0 ) ||
+						( strcmp(segment, "temp") == 0 ) ||
+						( strcmp(segment, "static") == 0 ) )
+			{
+				if (	( strcmp(segment, "local") == 0 ) ||
+						( strcmp(segment, "argument") == 0 ) ||
+						( strcmp(segment, "this") == 0 ) ||
+						( strcmp(segment, "that") == 0 ) )
+				{
+					if( strcmp(segment, "local") == 0 )
+					{
+						fprintf(asm_file,
+							"MOV R2, 0x1\n"
+							"MOV R1, 0x1\n");
+					}
+					else if( strcmp(segment, "argument") == 0 )
+					{
+						fprintf(asm_file,
+							"MOV R2, 0x3\n"
+							"MOV R1, 0x1\n");
+					}
+					else if( strcmp(segment, "this") == 0 )
+					{
+						fprintf(asm_file,
+							"MOV R2, 0x5\n"
+							"MOV R1, 0x1\n");
+					}
+					else if( strcmp(segment, "that") == 0 )
+					{
+						fprintf(asm_file,
+							"MOV R2, 0x7\n"
+							"MOV R1, 0x1\n");
+					}
+					fprintf(asm_file,
+						"MOV R4, %d\n"
+						"MOV R3, %d\n"
+						"ADD R2, R4\n"
+						"ADC R1, R3\n", (value & 0xF), ((value & 0xF0)>>4));
+				}
+				else if( strcmp(segment, "pointer") == 0 )
+				{
+					/*
+					if( value == 1 )
+					{
+						fprintf(asm_file,
+							"MOV R2, 0x1\n"
+							"MOV R1, 0x1\n");
+					}
+					*/
+				}
+				else if( strcmp(segment, "temp") == 0 )
+				{
+					fprintf(asm_file,
+						"MOV R2, %d\t\t// Load value\n"
+						"ADD R2, R2\t\t// value = 2 * value\n"
+						"ADC R1, 0\n"
+						"ADD R2, R2\t\t// value = 4 * value\n"
+						"ADC R1, 0\n"
+						"ADD R2, 0xB\t\t// value = value + 0x1B (base addr of TEMP section)\n"
+						"ADC R1, 0x1\n", (value & 0xF));
+				}
+				else if( strcmp(segment, "static") == 0 )
+				{
+					// ???
+					fprintf(asm_file,
+						"MOV R2, %d\t\t// Load value\n"
+						"ADD R2, R2\t\t// value = 2 * value\n"
+						"ADC R1, 0\n"
+						"ADD R2, R2\t\t// value = 4 * value\n"
+						"ADC R1, 0\n"
+						"ADD R2, 0xB\t\t// value = value + 0x3B (base addr of TEMP section)\n"
+						"ADC R1, 0x3\n", (value & 0xF));
+				}
+
+				fprintf(asm_file,
+					"MOV R0, [R1:R2]\n"
+					"MOV R7, R0\n"
+					"INC R2\n"
+					"ADC R1, 0\n"
+					"MOV R0, [R1:R2]\n"
+					"MOV R6, R0\n"
+					"INC R2\n"
+					"ADC R1, 0\n"
+					"MOV R0, [R1:R2]\n"
+					"MOV R5, R0\n"
+					"INC R2\n"
+					"ADC R1, 0\n"
+					"MOV R0, [R1:R2]\n"
+					"MOV R4, R0\n");
+			}
+			else
+			{
+				err = 4;
+			}
+		else
+		{
+			//Pop
+		}
+	}
+
+	if( err == 0 )
+	{
+		if( command == C_PUSH )
+		{
+			fprintf(asm_file, "// push %s %d\n", segment, value);
+			fprintf(asm_file,
+				"MOV R0, R7\t\t// Push down TOS\n"
+				"MOV R0, [R8:R9]\n"
+				"INC R9\n"
+				"ADC R8, 0\n"
+				"MOV R0, R6\n"
+				"MOV R0, [R8:R9]\n"
+				"INC R9\n"
+				"ADC R8, 0\n"
+				"MOV R0, R5\n"
+				"MOV R0, [R8:R9]\n"
+				"INC R9\n"
+				"ADC R8, 0\n"
+				"MOV R0, R4\n"
+				"MOV R0, [R8:R9]\n"
+				"INC R9\n"
+				"ADC R8, 0\n");
 			
 			switch( segment_type_t )
 			{
-				case LCL_ARG_THS_THT:
+				case LOCAL:
 					fprintf(asm_file,
-						"@%s\t\t// Load D with value to push\n"
-						"D=M\n"
-						"@%d\n"
-						"A=D+A\n"
-						"D=M\n", segment, value);
+						"MOV R2, 0x1\n"
+						"MOV R1, 0x1\n"
+						"MOV R4, %d\n"
+						"MOV R3, %d\n"
+						"ADD R2, R4\n"
+						"ADC R1, R3\n"
+						"MOV R0, [R1:R2]\n"
+						"MOV R7, R0\n"
+						"INC R2\n"
+						"ADC R1, 0\n"
+						"MOV R0, [R1:R2]\n"
+						"MOV R6, R0\n"
+						"INC R2\n"
+						"ADC R1, 0\n"
+						"MOV R0, [R1:R2]\n"
+						"MOV R5, R0\n"
+						"INC R2\n"
+						"ADC R1, 0\n"
+						"MOV R0, [R1:R2]\n"
+						"MOV R4, R0\n", (value & 0xF), ((value & 0xF0)>>4));
 					break;
+				case ARGUMENT:
+				case THIS:
+				case THAT:
 				case TEMP:
 					fprintf(asm_file,
-						"@5\t\t// Load D with value to push\n"
-						"D=A\n"
-						"@%d\n"
-						"A=D+A\n"
-						"D=M\n", value);
+						"MOV R2, %d\t\t// Load value\n"
+						"ADD R2, R2\t\t// value = 2 * value\n"
+						"ADC R1, 0\n"
+						"ADD R2, R2\t\t// value = 4 * value\n"
+						"ADC R1, 0\n"
+						"ADD R2, 0xB\t\t// value = value + 0x1B (base addr of TEMP section)\n"
+						"ADC R1, 0x1\n", (value & 0xF));
+					// load from mem
 					break;
 				case PTR:
 					fprintf(asm_file,
-						"@3\t\t// Load D with value to push\n"
+						"MOV R2, 0x\n"
 						"D=A\n"
 						"@%d\n"
 						"A=D+A\n"
 						"D=M\n", value);
 					break;
 				case CONSTANT:
-					fprintf(asm_file,
-						"@%d\t\t// Load D with value to push\n"
-						"D=A\n", value);
+					fprintf(asm_file, "MOV R7, %d\n", value & 0xF);
+					fprintf(asm_file, "MOV R6, %d\n", (value & 0xF0)>>4);
+					fprintf(asm_file, "MOV R5, %d\n", (value & 0xF00)>>8);
+					fprintf(asm_file, "MOV R4, %d\n", (value & 0xF000)>>12);
 					break;
 				case STATIC:
 					fprintf(asm_file,
@@ -424,12 +599,6 @@ int codeWriter_writePushPop(commandType command, char * segment, int value)
 						"D=M\n", vm_filename, value);
 					break;
 			}
-
-			fprintf(asm_file,
-				"@SP\t\t// A = 0 / M = SP\n"
-				"M=M+1\t\t// SP++\n"
-				"A=M-1\t\t// A = old SP / M = TOS - 1\n"
-				"M=D\t\t// (TOS - 1) <-- D\n");
 		}
 
 		else if( command == C_POP )
