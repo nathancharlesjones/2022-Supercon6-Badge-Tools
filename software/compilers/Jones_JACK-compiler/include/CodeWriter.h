@@ -97,6 +97,7 @@ int codeWriter_writeArithmetic(char * op);
 * 									4: Unrecognized memory segment
 * 									5: Invalid "pop"; cannot pop into constant memory segment
 * 									6: Command did not match either C_PUSH or C_POP
+*                                   7: Memory allocation failed
 **/
 int codeWriter_writePushPop(commandType command, char * memory, int offset);
 
